@@ -136,6 +136,16 @@ ProDocify/
   - background workers for expensive tasks
   - CDN for static assets
 - Observability via metrics, logs, and tracing
+  - expose health endpoints such as `/health` and `/ready` for liveness and readiness probes
+  - monitor service health, DB connectivity, queues, cache, and third-party integrations
+  - instrument application metrics for latency, throughput, error rate, and resource utilization
+  - use Prometheus/Grafana, Datadog, New Relic, Elastic APM, or equivalent monitoring tools
+  - centralize structured logs with correlation IDs and request context
+  - capture uncaught exceptions, promise rejections, and full stack traces
+  - integrate crash reporting tools such as Sentry, Bugsnag, Rollbar, or similar
+  - provide in-app user feedback or error-reporting flows for issues and diagnostics
+  - configure alerts for elevated error rates, high latency, service outages, and resource thresholds
+  - track analytics for user activity, document operations, feature adoption, search behavior, and editor usage
 
 ## 10. Frontend UX and Look
 - Modern, clean workspace interface
@@ -205,6 +215,16 @@ Backend:
 - Insecure sharing: expire links and limit scope
 - Data leakage: strict ACLs and team boundaries
 - Supply chain: lock dependencies and audit regularly
+- Security vulnerability checklist:
+  - review OWASP Top 10 and relevant CWE categories for web and API flows
+  - perform dependency and supply-chain scanning in CI/CD
+  - run static application security testing (SAST) and dynamic application security testing (DAST)
+  - conduct regular penetration tests and security code reviews
+  - scan container images, infrastructure-as-code, and deployment artifacts
+  - enforce secret scanning, least privilege, and secure configuration defaults
+  - validate auth/session flows, MFA options, brute-force protections, and rate limiting
+  - audit log access, monitor failed access attempts, and maintain an incident response plan
+  - keep patch management and vulnerability triage processes current
 
 ## 15. Future Enhancements
 - Full collaborative editing with OT/CRDT

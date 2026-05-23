@@ -93,6 +93,12 @@ npm run dev
 
 Backend will be available at: **http://localhost:4000/api**
 
+### 6. API Documentation
+Once the server is running, view Swagger documentation at:
+```text
+http://localhost:4000/api/docs
+```
+
 ---
 
 ## 📁 Project Structure
