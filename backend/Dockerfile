@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json .
 COPY tsconfig.json .
 COPY tsconfig.build.json .
-COPY prisma.config.json .
+COPY prisma.config.ts .
 COPY prisma ./prisma
 COPY src ./src
 COPY entrypoint.sh ./entrypoint.sh
