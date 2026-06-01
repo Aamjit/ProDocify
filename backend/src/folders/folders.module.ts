@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { FoldersService } from './folders.service';
-import { FoldersController } from './folders.controller';
+import { UserContextService } from '../common/user-context.service.js';
+import { FoldersController } from './folders.controller.js';
+import { FoldersService } from './folders.service.js';
 
 @Module({
-    controllers: [FoldersController],
-    providers: [FoldersService]
+  controllers: [FoldersController],
+  providers: [FoldersService, UserContextService],
 })
 export class FoldersModule { }

@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateVersionDto } from './dto/create-version.dto';
-import { RateLimiter, RateLimitConfig } from '../common/rate-limiter';
+import { RateLimiter, RateLimitConfig } from '../common/rate-limiter.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { CreateVersionDto } from './dto/create-version.dto.js';
 
 @Injectable()
 export class DocumentVersionService {
@@ -13,12 +13,12 @@ export class DocumentVersionService {
   constructor(private readonly prisma: PrismaService) {
     const rateLimitConfig: RateLimitConfig = {
       limit: 100, // 100 versions per user
-      window: 3600 // per hour
+      window: 3600, // per hour
     };
     this.rateLimiter = new RateLimiter(rateLimitConfig);
   }
 
-  async createVersion(documentId: string, userId: string, data: CreateVersionDto) {
+  async createVersion(documentId: string, data: CreateVersionDto, userId: string) {
     try {
       // Rate limit check
       this.rateLimiter.checkLimit(`version_create:${userId}`);
@@ -26,7 +26,7 @@ export class DocumentVersionService {
       // Validate content size
       if (data.content && data.content.length > this.maxContentSize) {
         throw new BadRequestException(
-          `Content size exceeds maximum allowed size of ${this.maxContentSize / 1024 / 1024}MB`
+          `Content size exceeds maximum allowed size of ${this.maxContentSize / 1024 / 1024}MB`,
         );
       }
 
@@ -37,10 +37,10 @@ export class DocumentVersionService {
 
       // Execute in explicit transaction with Serializable isolation
       const version = await this.prisma.$transaction(
-        async (tx) => {
+        async (tx: any) => {
           // Lock and fetch document to prevent race conditions
           const document = await tx.document.findUnique({
-            where: { id: documentId }
+            where: { id: documentId },
           });
 
           if (!document) {
@@ -52,18 +52,18 @@ export class DocumentVersionService {
           }
 
           // Calculate next version number atomically
-          const nextVersionNumber = document.currentVersion + 1;
+          const nextVersionNumber = +document.currentVersion + 1;
 
           // Create version and update document atomically
           const createdVersion = await tx.documentVersion.create({
             data: {
-              documentId,
+              documentId: documentId,
               versionNumber: nextVersionNumber,
               content: data.content,
               changelog: data.changelog || null,
-              createdBy: userId
+              createdBy: userId,
             },
-            include: { creator: { select: { id: true, email: true, name: true } } }
+            include: { creator: { select: { id: true, email: true, name: true } } },
           });
 
           // Update document in same transaction
@@ -72,8 +72,8 @@ export class DocumentVersionService {
             data: {
               content: data.content,
               currentVersion: nextVersionNumber,
-              updatedAt: new Date()
-            }
+              updatedAt: new Date(),
+            },
           });
 
           return createdVersion;
@@ -81,44 +81,39 @@ export class DocumentVersionService {
         {
           maxWait: this.transactionTimeout,
           timeout: this.transactionTimeout,
-          isolationLevel: 'Serializable'
-        }
+          isolationLevel: 'Serializable',
+        },
       );
 
       this.logger.debug(
-        `Version ${version.versionNumber} created for document ${documentId} by user ${userId}`
+        `Version ${version.versionNumber} created for document ${documentId} by user ${userId}`,
       );
 
       return version;
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+    } catch (error: any) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
 
       this.logger.error(
         `Error creating version for document ${documentId}: ${error.message}`,
-        error.stack
+        error.stack,
       );
 
       if (error.code === 'P2034') {
-        throw new BadRequestException(
-          'Concurrent edit detected. Please retry the operation.'
-        );
+        throw new BadRequestException('Concurrent edit detected. Please retry the operation.');
       }
 
       throw new BadRequestException('Failed to create version. Please try again.');
     }
   }
 
-  async getVersionHistory(documentId: string, userId: string, skip = 0, take = 20) {
+  async getVersionHistory(documentId: string, skip = 0, take = 20, userId: string) {
     try {
       // Validate pagination parameters
       if (skip < 0 || take < 1 || take > 100) {
         throw new BadRequestException(
-          'Invalid pagination parameters. Skip must be >= 0, take must be between 1 and 100.'
+          'Invalid pagination parameters. Skip must be >= 0, take must be between 1 and 100.',
         );
       }
 
@@ -129,10 +124,10 @@ export class DocumentVersionService {
           include: { creator: { select: { id: true, email: true, name: true } } },
           orderBy: { versionNumber: 'desc' },
           skip,
-          take
+          take,
         }),
         this.prisma.documentVersion.count({ where: { documentId } }),
-        this.prisma.document.findUnique({ where: { id: documentId } })
+        this.prisma.document.findUnique({ where: { id: documentId } }),
       ]);
 
       if (!document) {
@@ -144,21 +139,18 @@ export class DocumentVersionService {
       }
 
       this.logger.debug(
-        `Retrieved version history for document ${documentId}: ${versions.length}/${total} versions`
+        `Retrieved version history for document ${documentId}: ${versions.length}/${total} versions`,
       );
 
       return { versions, total, skip, take };
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+    } catch (error: any) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
 
       this.logger.error(
         `Error retrieving version history for document ${documentId}: ${error.message}`,
-        error.stack
+        error.stack,
       );
 
       throw new BadRequestException('Failed to retrieve version history.');
@@ -177,10 +169,10 @@ export class DocumentVersionService {
         this.prisma.document.findUnique({ where: { id: documentId } }),
         this.prisma.documentVersion.findUnique({
           where: {
-            documentId_versionNumber: { documentId, versionNumber }
+            documentId_versionNumber: { documentId, versionNumber },
           },
-          include: { creator: { select: { id: true, email: true, name: true } } }
-        })
+          include: { creator: { select: { id: true, email: true, name: true } } },
+        }),
       ]);
 
       if (!document) {
@@ -193,37 +185,28 @@ export class DocumentVersionService {
 
       if (!version) {
         throw new NotFoundException(
-          `Version ${versionNumber} not found for document ${documentId}`
+          `Version ${versionNumber} not found for document ${documentId}`,
         );
       }
 
-      this.logger.debug(
-        `Retrieved version ${versionNumber} for document ${documentId}`
-      );
+      this.logger.debug(`Retrieved version ${versionNumber} for document ${documentId}`);
 
       return version;
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+    } catch (error: any) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
 
       this.logger.error(
         `Error retrieving version ${versionNumber} for document ${documentId}: ${error.message}`,
-        error.stack
+        error.stack,
       );
 
       throw new BadRequestException('Failed to retrieve version.');
     }
   }
 
-  async rollbackToVersion(
-    documentId: string,
-    versionNumber: number,
-    userId: string
-  ) {
+  async rollbackToVersion(documentId: string, versionNumber: number, userId: string) {
     try {
       // Validate version number
       if (versionNumber < 1 || !Number.isInteger(versionNumber)) {
@@ -238,7 +221,7 @@ export class DocumentVersionService {
         async (tx) => {
           // Fetch document
           const document = await tx.document.findUnique({
-            where: { id: documentId }
+            where: { id: documentId },
           });
 
           if (!document) {
@@ -252,20 +235,20 @@ export class DocumentVersionService {
           // Fetch target version
           const targetVersion = await tx.documentVersion.findUnique({
             where: {
-              documentId_versionNumber: { documentId, versionNumber }
-            }
+              documentId_versionNumber: { documentId, versionNumber },
+            },
           });
 
           if (!targetVersion) {
             throw new NotFoundException(
-              `Version ${versionNumber} not found for document ${documentId}`
+              `Version ${versionNumber} not found for document ${documentId}`,
             );
           }
 
           // Prevent rolling back to current version
           if (versionNumber === document.currentVersion) {
             throw new BadRequestException(
-              'Cannot rollback to the current version. Please select a different version.'
+              'Cannot rollback to the current version. Please select a different version.',
             );
           }
 
@@ -278,9 +261,9 @@ export class DocumentVersionService {
               versionNumber: nextVersionNumber,
               content: targetVersion.content,
               changelog: `Rollback to version ${versionNumber}`,
-              createdBy: userId
+              createdBy: userId,
             },
-            include: { creator: { select: { id: true, email: true, name: true } } }
+            include: { creator: { select: { id: true, email: true, name: true } } },
           });
 
           // Update document with rolled-back content
@@ -289,9 +272,9 @@ export class DocumentVersionService {
             data: {
               content: targetVersion.content,
               currentVersion: nextVersionNumber,
-              updatedAt: new Date()
+              updatedAt: new Date(),
             },
-            include: { owner: { select: { id: true, email: true, name: true } } }
+            include: { owner: { select: { id: true, email: true, name: true } } },
           });
 
           return { rollbackVersion, updatedDocument };
@@ -299,35 +282,32 @@ export class DocumentVersionService {
         {
           maxWait: this.transactionTimeout,
           timeout: this.transactionTimeout,
-          isolationLevel: 'Serializable'
-        }
+          isolationLevel: 'Serializable',
+        },
       );
 
       this.logger.debug(
-        `Document ${documentId} rolled back to version ${versionNumber} by user ${userId}`
+        `Document ${documentId} rolled back to version ${versionNumber} by user ${userId}`,
       );
 
       return {
         message: `Document rolled back to version ${versionNumber}`,
         version: result.rollbackVersion,
-        document: result.updatedDocument
+        document: result.updatedDocument,
       };
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+    } catch (error: any) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
 
       this.logger.error(
         `Error rolling back version ${versionNumber} for document ${documentId}: ${error.message}`,
-        error.stack
+        error.stack,
       );
 
       if (error.code === 'P2034') {
         throw new BadRequestException(
-          'Concurrent edit detected during rollback. Please retry the operation.'
+          'Concurrent edit detected during rollback. Please retry the operation.',
         );
       }
 
@@ -339,7 +319,7 @@ export class DocumentVersionService {
     documentId: string,
     versionNumber1: number,
     versionNumber2: number,
-    userId: string
+    userId: string,
   ) {
     try {
       // Validate version numbers
@@ -349,14 +329,12 @@ export class DocumentVersionService {
         versionNumber1 < 1 ||
         versionNumber2 < 1
       ) {
-        throw new BadRequestException(
-          'Version numbers must be positive integers.'
-        );
+        throw new BadRequestException('Version numbers must be positive integers.');
       }
 
       if (versionNumber1 === versionNumber2) {
         throw new BadRequestException(
-          'Cannot compare a version with itself. Please select two different versions.'
+          'Cannot compare a version with itself. Please select two different versions.',
         );
       }
 
@@ -365,16 +343,16 @@ export class DocumentVersionService {
         this.prisma.document.findUnique({ where: { id: documentId } }),
         this.prisma.documentVersion.findUnique({
           where: {
-            documentId_versionNumber: { documentId, versionNumber: versionNumber1 }
+            documentId_versionNumber: { documentId, versionNumber: versionNumber1 },
           },
-          include: { creator: { select: { id: true, email: true, name: true } } }
+          include: { creator: { select: { id: true, email: true, name: true } } },
         }),
         this.prisma.documentVersion.findUnique({
           where: {
-            documentId_versionNumber: { documentId, versionNumber: versionNumber2 }
+            documentId_versionNumber: { documentId, versionNumber: versionNumber2 },
           },
-          include: { creator: { select: { id: true, email: true, name: true } } }
-        })
+          include: { creator: { select: { id: true, email: true, name: true } } },
+        }),
       ]);
 
       if (!document) {
@@ -396,7 +374,7 @@ export class DocumentVersionService {
       const newerVersion = versionNumber1 < versionNumber2 ? version2 : version1;
 
       this.logger.debug(
-        `Compared versions ${versionNumber1} and ${versionNumber2} for document ${documentId}`
+        `Compared versions ${versionNumber1} and ${versionNumber2} for document ${documentId}`,
       );
 
       return {
@@ -406,20 +384,17 @@ export class DocumentVersionService {
           oldLength,
           newLength,
           lengthDifference: newLength - oldLength,
-          percentageChange: oldLength > 0 ? ((newLength - oldLength) / oldLength) * 100 : 0
-        }
+          percentageChange: oldLength > 0 ? ((newLength - oldLength) / oldLength) * 100 : 0,
+        },
       };
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
+    } catch (error: any) {
+      if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
 
       this.logger.error(
         `Error comparing versions for document ${documentId}: ${error.message}`,
-        error.stack
+        error.stack,
       );
 
       throw new BadRequestException('Failed to compare versions.');
@@ -430,16 +405,14 @@ export class DocumentVersionService {
     try {
       // Validate keepCount
       if (keepCount < 1 || !Number.isInteger(keepCount) || keepCount > 1000) {
-        throw new BadRequestException(
-          'Keep count must be a positive integer between 1 and 1000.'
-        );
+        throw new BadRequestException('Keep count must be a positive integer between 1 and 1000.');
       }
 
       // Execute in transaction for consistency
-      const result = await this.prisma.$transaction(async (tx) => {
+      const result = await this.prisma.$transaction(async (tx: any) => {
         // Get total version count
         const totalVersions = await tx.documentVersion.count({
-          where: { documentId }
+          where: { documentId },
         });
 
         if (totalVersions <= keepCount) {
@@ -451,41 +424,39 @@ export class DocumentVersionService {
           where: { documentId },
           orderBy: { versionNumber: 'desc' },
           skip: keepCount,
-          select: { id: true }
+          select: { id: true },
         });
 
-        const deleteIds = versionsToDelete.map(v => v.id);
+        const deleteIds = versionsToDelete.map((v: any) => v.id);
 
         if (deleteIds.length > 0) {
           await tx.documentVersion.deleteMany({
-            where: { id: { in: deleteIds } }
+            where: { id: { in: deleteIds } },
           });
         }
 
         return {
           deletedCount: deleteIds.length,
-          remainingVersions: keepCount
+          remainingVersions: keepCount,
         };
       });
 
       this.logger.debug(
-        `Deleted ${result.deletedCount} old versions for document ${documentId}, keeping ${result.remainingVersions}`
+        `Deleted ${result.deletedCount} old versions for document ${documentId}, keeping ${result.remainingVersions}`,
       );
 
       return result;
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof BadRequestException) {
         throw error;
       }
 
       this.logger.error(
         `Error deleting old versions for document ${documentId}: ${error.message}`,
-        error.stack
+        error.stack,
       );
 
-      throw new BadRequestException(
-        'Failed to delete old versions. Please try again.'
-      );
+      throw new BadRequestException('Failed to delete old versions. Please try again.');
     }
   }
 

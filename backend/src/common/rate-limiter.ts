@@ -1,4 +1,4 @@
-import { Injectable, TooManyRequestsException } from '@nestjs/common';
+import { Injectable, RequestTimeoutException } from '@nestjs/common';
 import { Request } from 'express';
 
 export interface RateLimitConfig {
@@ -32,12 +32,12 @@ export class RateLimiter {
     }
 
     const record = this.requests.get(identifier)!;
-    const recentTimestamps = record.timestamps.filter(t => now - t < windowMs);
+    const recentTimestamps = record.timestamps.filter((t) => now - t < windowMs);
 
     if (recentTimestamps.length >= this.config.limit) {
       const remainingSeconds = Math.ceil((recentTimestamps[0] + windowMs - now) / 1000);
-      throw new TooManyRequestsException(
-        `Rate limit exceeded: Maximum ${this.config.limit} requests per ${this.config.window} seconds. Retry after ${remainingSeconds}s`
+      throw new RequestTimeoutException(
+        `Rate limit exceeded: Maximum ${this.config.limit} requests per ${this.config.window} seconds. Retry after ${remainingSeconds}s`,
       );
     }
 
@@ -50,7 +50,7 @@ export class RateLimiter {
     const windowMs = this.config.window * 1000;
 
     for (const [key, record] of this.requests.entries()) {
-      record.timestamps = record.timestamps.filter(t => now - t < windowMs);
+      record.timestamps = record.timestamps.filter((t) => now - t < windowMs);
       if (record.timestamps.length === 0) {
         this.requests.delete(key);
       }
@@ -64,7 +64,7 @@ export class RateLimiter {
     }
     return {
       totalTrackedKeys: this.requests.size,
-      totalRequests
+      totalRequests,
     };
   }
 }

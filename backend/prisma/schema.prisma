@@ -4,57 +4,202 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id              String             @id @default(uuid())
-  email           String             @unique
-  password        String
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  documents       Document[]
-  folders         Folder[]
-  documentVersions DocumentVersion[]
+  id                   String                @id @default(uuid())
+  email                String                @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  password             String
+  name                 String?
+  documents            Document[]
+  documentGrants       DocumentShare[]       @relation("documentShareGranter")
+  documentShares       DocumentShare[]       @relation("documentShareRecipient")
+  documentVersions     DocumentVersion[]
+  folders              Folder[]
+  folderGrants         FolderShare[]         @relation("folderShareGranter")
+  folderShares         FolderShare[]         @relation("folderShareRecipient")
+  ownedTeams           Team[]
+  createdTeamDocuments TeamDocument[]
+  teamDocumentVersions TeamDocumentVersion[]
+  createdTeamFolders   TeamFolder[]
+  teamMemberships      TeamMember[]
+
+  @@index([email])
+}
+
+model Team {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  owner       User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  documents   TeamDocument[]
+  folders     TeamFolder[]
+  members     TeamMember[]
+
+  @@unique([ownerId, name])
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+model TeamMember {
+  id       String   @id @default(uuid())
+  teamId   String
+  userId   String
+  role     String   @default("VIEWER")
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+  @@index([role])
 }
 
 model Folder {
-  id        String     @id @default(uuid())
-  name      String
-  ownerId   String
-  owner     User       @relation(fields: [ownerId], references: [id])
-  documents Document[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id         String        @id @default(uuid())
+  name       String
+  ownerId    String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  visibility Visibility    @default(PRIVATE)
+  documents  Document[]
+  owner      User          @relation(fields: [ownerId], references: [id])
+  shares     FolderShare[]
 }
 
 model Document {
-  id             String               @id @default(uuid())
+  id             String            @id @default(uuid())
   title          String
   content        String?
   folderId       String?
-  folder         Folder?              @relation(fields: [folderId], references: [id])
   ownerId        String
-  owner          User                 @relation(fields: [ownerId], references: [id])
-  currentVersion Int                  @default(1)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  currentVersion Int               @default(0)
+  visibility     Visibility        @default(PRIVATE)
+  folder         Folder?           @relation(fields: [folderId], references: [id])
+  owner          User              @relation(fields: [ownerId], references: [id])
+  shares         DocumentShare[]
   versions       DocumentVersion[]
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+
+  @@index([ownerId])
+  @@index([folderId])
+}
+
+model TeamFolder {
+  id        String         @id @default(uuid())
+  teamId    String
+  name      String
+  createdBy String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  documents TeamDocument[]
+  creator   User           @relation(fields: [createdBy], references: [id])
+  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, name])
+  @@index([teamId])
+  @@index([createdBy])
+}
+
+model TeamDocument {
+  id             String                @id @default(uuid())
+  teamId         String
+  folderId       String?
+  title          String
+  content        String?
+  ownerId        String
+  currentVersion Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  folder         TeamFolder?           @relation(fields: [folderId], references: [id])
+  owner          User                  @relation(fields: [ownerId], references: [id])
+  team           Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  versions       TeamDocumentVersion[]
+
+  @@index([teamId])
+  @@index([folderId])
+  @@index([ownerId])
 }
 
 model DocumentVersion {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   documentId    String
-  document      Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
   versionNumber Int
   changelog     String?
   content       String
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime @default(now())
   createdBy     String
-  creator       User      @relation(fields: [createdBy], references: [id])
+  creator       User     @relation(fields: [createdBy], references: [id])
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@unique([documentId, versionNumber])
   @@index([documentId])
   @@index([createdAt])
   @@index([createdBy])
+}
+
+model TeamDocumentVersion {
+  id             String       @id @default(uuid())
+  teamDocumentId String
+  versionNumber  Int
+  changelog      String?
+  content        String
+  createdAt      DateTime     @default(now())
+  createdBy      String
+  creator        User         @relation(fields: [createdBy], references: [id])
+  document       TeamDocument @relation(fields: [teamDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([teamDocumentId, versionNumber])
+  @@index([teamDocumentId])
+  @@index([createdAt])
+}
+
+model DocumentShare {
+  id         String          @id @default(uuid())
+  documentId String
+  userId     String
+  permission SharePermission @default(VIEWER)
+  grantedBy  String
+  grantedAt  DateTime        @default(now())
+  document   Document        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  granter    User            @relation("documentShareGranter", fields: [grantedBy], references: [id])
+  user       User            @relation("documentShareRecipient", fields: [userId], references: [id])
+
+  @@unique([documentId, userId])
+  @@index([userId])
+}
+
+model FolderShare {
+  id         String          @id @default(uuid())
+  folderId   String
+  userId     String
+  permission SharePermission @default(VIEWER)
+  grantedBy  String
+  grantedAt  DateTime        @default(now())
+  folder     Folder          @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  granter    User            @relation("folderShareGranter", fields: [grantedBy], references: [id])
+  user       User            @relation("folderShareRecipient", fields: [userId], references: [id])
+
+  @@unique([folderId, userId])
+  @@index([userId])
+}
+
+enum Visibility {
+  PRIVATE
+  SHARED
+  TEAM
+  PUBLIC
+}
+
+enum SharePermission {
+  VIEWER
+  EDITOR
+  OWNER
 }

@@ -1,13 +1,7 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  TooManyRequestsException,
-  Logger
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, Logger } from '@nestjs/common';
 import { Request } from 'express';
-import { RateLimiter } from '../rate-limiter';
-import { RateLimitDecoratorOptions } from '../decorators/rate-limit.decorator';
+import { RateLimitDecoratorOptions } from './decorators/rate-limit.decorator.js';
+import { RateLimiter } from './rate-limiter.js';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
@@ -24,10 +18,8 @@ export class RateLimitGuard implements CanActivate {
     try {
       limiter.checkLimit(key);
       return true;
-    } catch (error) {
-      this.logger.warn(
-        `Rate limit exceeded for ${key}: ${error.message}`
-      );
+    } catch (error: any) {
+      this.logger.warn(`Rate limit exceeded for ${key}: ${error.message}`);
       throw error;
     }
   }
@@ -50,7 +42,7 @@ export class RateLimitGuard implements CanActivate {
     if (!limiter) {
       limiter = new RateLimiter({
         limit: this.options.limit,
-        window: this.options.window
+        window: this.options.window,
       });
       this.rateLimiters.set(key, limiter);
     }

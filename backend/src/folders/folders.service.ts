@@ -1,41 +1,56 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateFolderDto } from './dto/create-folder.dto';
-import { UpdateFolderDto } from './dto/update-folder.dto';
+import { UserContextService } from '../common/user-context.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { CreateFolderDto } from './dto/create-folder.dto.js';
+import { UpdateFolderDto } from './dto/update-folder.dto.js';
 
 @Injectable()
 export class FoldersService {
-    constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userContext: UserContextService,
+  ) { }
 
-    findAll() {
-        return this.prisma.folder.findMany({
-            include: { documents: true }
-        });
-    }
+  findAll(): Promise<any> {
+    return this.prisma.runAsUser((prisma) =>
+      (prisma as any).folder.findMany({
+        where: { ownerId: this.userContext.getCurrentUserId() },
+        include: { documents: true },
+      }),
+    );
+  }
 
-    findOne(id: string) {
-        return this.prisma.folder.findUnique({
-            where: { id },
-            include: { documents: true }
-        });
-    }
+  findOne(id: string): Promise<any> {
+    return this.prisma.runAsUser((prisma) =>
+      (prisma as any).folder.findUnique({
+        where: { id, ownerId: this.userContext.getCurrentUserId() },
+        include: { documents: true },
+      }),
+    );
+  }
 
-    create(data: CreateFolderDto) {
-        return this.prisma.folder.create({
-            data
-        });
-    }
+  create(data: CreateFolderDto): Promise<any> {
+    return this.prisma.runAsUser((prisma) =>
+      (prisma as any).folder.create({
+        data: { ...data, ownerId: this.userContext.getCurrentUserId() },
+      }),
+    );
+  }
 
-    update(id: string, data: UpdateFolderDto) {
-        return this.prisma.folder.update({
-            where: { id },
-            data
-        });
-    }
+  update(id: string, data: UpdateFolderDto): Promise<any> {
+    return this.prisma.runAsUser((prisma) =>
+      (prisma as any).folder.update({
+        where: { id, ownerId: this.userContext.getCurrentUserId() },
+        data,
+      }),
+    );
+  }
 
-    remove(id: string) {
-        return this.prisma.folder.delete({
-            where: { id }
-        });
-    }
+  remove(id: string): Promise<any> {
+    return this.prisma.runAsUser((prisma) =>
+      (prisma as any).folder.delete({
+        where: { id, ownerId: this.userContext.getCurrentUserId() },
+      }),
+    );
+  }
 }

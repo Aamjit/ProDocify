@@ -1,68 +1,71 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateDocumentDto } from './dto/create-document.dto';
-import { UpdateDocumentDto } from './dto/update-document.dto';
-import { DocumentVersionService } from './document-version.service';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { DocumentVersionService } from './document-version.service.js';
+import { CreateDocumentDto } from './dto/create-document.dto.js';
+import { UpdateDocumentDto } from './dto/update-document.dto.js';
+import { Document } from '@prisma/client';
 
 @Injectable()
 export class DocumentsService {
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly versionService: DocumentVersionService
-    ) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly versionService: DocumentVersionService,
+  ) { }
 
-    findAll() {
-        return this.prisma.document.findMany({
-            include: { folder: true }
-        });
+  findAll(ownerId: string): Promise<Document[]> {
+    return this.prisma.document.findMany({ where: { ownerId }, include: { folder: true } });
+  }
+
+  findOne(ownerId: string, id: string): Promise<Document | null> {
+    return this.prisma.runAsUser((prisma) =>
+      prisma.document.findUnique({ where: { id, ownerId }, include: { folder: true } }),
+    );
+  }
+
+  async create(data: CreateDocumentDto): Promise<any> {
+    const document = await this.prisma.runAsUser((prisma) =>
+      prisma.document.create({ data: { ...data, ownerId: data.ownerId } }),
+    );
+
+    if (document) {
+      await this.versionService.createVersion(
+        document.id,
+        {
+          content: document.content ?? '',
+          changelog: document.title
+            ? `Initial content for document "${document.title}"`
+            : 'Initial content',
+        },
+        data.ownerId,
+      );
     }
 
-    findOne(id: string) {
-        return this.prisma.document.findUnique({
-            where: { id },
-            include: { folder: true }
-        });
+    return document;
+  }
+
+  async update(ownerId: string, id: string, data: UpdateDocumentDto): Promise<any> {
+    if (data.content) {
+      await this.versionService.createVersion(
+        id,
+        {
+          content: data.content,
+          changelog: data.changelog,
+        },
+        ownerId,
+      );
     }
 
-    async create(data: CreateDocumentDto, userId?: string) {
-        // If content is being updated and userId is provided, create a version
-        const document = await this.prisma.document.create({
-            data
-        });
+    return this.prisma.runAsUser((prisma) =>
+      prisma.document.update({
+        where: { id, ownerId },
+        data: { title: data.title, folderId: data.folderId },
+      }),
+    );
+  }
 
-        if (document && userId) {
-            await this.versionService.createVersion(document.id, userId, {
-                content: document.content,
-                changelog: document.title ? `Initial content for document "${document.title}"` : 'Initial content'
-            });
-        }
-
-        return document;
-    }
-
-    async update(id: string, data: UpdateDocumentDto, userId?: string) {
-        // If content is being updated and userId is provided, create a version
-        if (data.content && userId) {
-            await this.versionService.createVersion(id, userId, {
-                content: data.content,
-                changelog: data.changelog
-            });
-        }
-
-        return this.prisma.document.update({
-            where: { id },
-            data: {
-                title: data.title,
-                folderId: data.folderId,
-                ownerId: data.ownerId
-            }
-        });
-    }
-
-    remove(id: string) {
-        return this.prisma.document.delete({
-            where: { id }
-        });
-    }
+  remove(ownerId: string, id: string): Promise<any> {
+    return this.prisma.runAsUser((prisma) =>
+      prisma.document.delete({ where: { id, ownerId } }),
+    );
+  }
 }
-

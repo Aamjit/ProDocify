@@ -1,5 +1,5 @@
 import { UseGuards, applyDecorators } from '@nestjs/common';
-import { RateLimitGuard } from '../rate-limit.guard';
+import { RateLimitGuard } from '../rate-limit.guard.js';
 
 export interface RateLimitDecoratorOptions {
   limit: number; // max requests
@@ -18,7 +18,5 @@ export interface RateLimitDecoratorOptions {
  * async createVersion(...) { ... }
  */
 export function RateLimit(options: RateLimitDecoratorOptions) {
-  return applyDecorators(
-    UseGuards(new RateLimitGuard(options))
-  );
+  return applyDecorators(UseGuards(new RateLimitGuard(options)));
 }
