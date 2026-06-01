@@ -6,4 +6,4 @@ if [ -f ./node_modules/.bin/prisma ]; then
   npx prisma migrate deploy
 fi
 # Start the NestJS application
-exec node dist/main.js
+exec node dist/src/main.js
