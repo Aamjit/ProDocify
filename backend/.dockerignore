@@ -4,8 +4,4 @@ Dockerfile
     .dockerignore
     .git
     .gitignore
-src
-    *.ts
-    *.map
-    *.log
 logs
