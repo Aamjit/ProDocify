@@ -4,7 +4,6 @@ import * as Sentry from '@sentry/nestjs';
 import { AppService } from './app.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 
-@ApiTags('health')
 @Controller()
 export class AppController {
   constructor(
@@ -34,6 +33,7 @@ export class AppController {
     throw new Error('My first Sentry error!');
   }
 
+  @ApiTags('health')
   @Get('db-health')
   @ApiOperation({ summary: 'Prisma connectivity health check' })
   async getPrismaHealth() {
