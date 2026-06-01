@@ -13,7 +13,7 @@ COPY src ./src
 COPY entrypoint.sh ./entrypoint.sh
 
 # Install dependencies (including dev for build)
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Generate Prisma client
 RUN npm run prisma:generate
