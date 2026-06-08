@@ -26,7 +26,7 @@ import { PassportModule } from '@nestjs/passport/dist/index.js';
     DocumentsModule,
     FoldersModule,
     TeamsModule,
-    PassportModule.register({ session: true }),
+    PassportModule.register({ session: false }),
   ],
   controllers: [AppController],
   providers: [

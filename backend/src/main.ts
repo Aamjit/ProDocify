@@ -13,7 +13,6 @@ import { UpdateDocumentDto } from './documents/dto/update-document.dto.js';
 import { CreateFolderDto } from './folders/dto/create-folder.dto.js';
 import { RegisterDto } from './users/dto/register.dto.js';
 import { UserDto } from './users/dto/user.dto.js';
-import passport from 'passport';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -23,8 +22,6 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.enableCors({ origin: true, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.use(passport.initialize());
-  app.use(passport.session());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('ProDocify API')
