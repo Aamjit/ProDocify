@@ -8,6 +8,9 @@ export class UserDto {
   @ApiProperty({ example: 'user@example.com', description: 'User email address' })
   email!: string;
 
+  @ApiProperty({ example: 'John Doe', description: 'User full name', required: false })
+  name?: string;
+
   @Exclude()
   password!: string;
 

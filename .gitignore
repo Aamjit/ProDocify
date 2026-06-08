@@ -2,3 +2,4 @@
 .openclaw/
 .vscode/*
 *.tsbuildinfo
+*/logs/

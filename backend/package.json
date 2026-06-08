@@ -9,7 +9,15 @@
         "start": "node dist/src/main.js",
         "lint": "eslint src/**/*.{ts,js} --fix",
         "prisma:generate": "prisma generate",
-        "prisma:migrate:dev": "prisma migrate dev --name init"
+        "prisma:migrate:dev": "prisma migrate dev --name init",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:services": "vitest run src/**/*service.spec.ts",
+        "test:users": "vitest run src/users/**/*.spec.ts",
+        "test:documents": "vitest run src/documents/**/*.spec.ts",
+        "test:folders": "vitest run src/folders/**/*.spec.ts",
+        "test:teams": "vitest run src/teams/**/*.spec.ts",
+        "test:prisma": "vitest run src/prisma/**/*.spec.ts"
     },
     "dependencies": {
         "@nestjs/common": "^11.1.24",
@@ -18,8 +26,10 @@
         "@nestjs/jwt": "^11.0.2",
         "@nestjs/passport": "^11.0.5",
         "@nestjs/platform-express": "^11.1.24",
+        "@nestjs/platform-socket.io": "^11.1.24",
         "@nestjs/swagger": "^11.4.4",
         "@nestjs/throttler": "^6.5.0",
+        "@nestjs/websockets": "^11.1.24",
         "@prisma/adapter-pg": "^7.8.0",
         "@prisma/client": "^7.8.0",
         "@sentry/nestjs": "^10.55.0",
@@ -29,7 +39,9 @@
         "class-validator": "^0.15.1",
         "nest-winston": "^1.10.2",
         "passport": "^0.7.0",
+        "passport-google-oauth20": "^2.0.0",
         "passport-jwt": "^4.0.1",
+        "passport-oauth2": "^1.8.0",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.2",
         "swagger-ui-express": "^5.0.1",
@@ -40,7 +52,9 @@
         "@types/bcrypt": "^6.0.0",
         "@types/express": "^5.0.6",
         "@types/node": "^25.9.1",
+        "@types/passport-google-oauth20": "^2.0.17",
         "@types/passport-jwt": "^4.0.1",
+        "@types/passport-oauth2": "^1.8.0",
         "@typescript-eslint/eslint-plugin": "^8.59.4",
         "@typescript-eslint/parser": "^8.59.4",
         "eslint": "^8",
@@ -50,6 +64,7 @@
         "prettier": "^3.8.3",
         "prisma": "^7.8.0",
         "ts-node-dev": "^2.0.0",
-        "typescript": "^6.0.3"
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.8"
     }
 }

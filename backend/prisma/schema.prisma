@@ -11,8 +11,10 @@ model User {
   email                String                @unique
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-  password             String
+  password             String?
   name                 String?
+  avatarUrl            String?
+  accountAuthType      AccountAuthType       @default(EMAIL)
   documents            Document[]
   documentGrants       DocumentShare[]       @relation("documentShareGranter")
   documentShares       DocumentShare[]       @relation("documentShareRecipient")
@@ -50,7 +52,7 @@ model TeamMember {
   id       String   @id @default(uuid())
   teamId   String
   userId   String
-  role     String   @default("VIEWER")
+  role     TeamRole @default(VIEWER)
   joinedAt DateTime @default(now())
   team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -202,4 +204,15 @@ enum SharePermission {
   VIEWER
   EDITOR
   OWNER
+}
+
+enum TeamRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum AccountAuthType {
+  GOOGLE_OAUTH
+  EMAIL
 }

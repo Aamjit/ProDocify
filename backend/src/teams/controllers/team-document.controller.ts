@@ -18,17 +18,22 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { RoleGuard } from '../guards/role.guard.js';
 import { PermissionService } from '../services/permission.service.js';
 import { TeamDocumentService } from '../services/team-document.service.js';
+import { CreateTeamDocumentDto } from '../dto/team-document.dto.js';
+import * as swaggerDecorators from './swagger.decorators.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { UserContextService } from '../../common/user-context.service.js';
+import { winstonLogger } from '../../common/logger.js';
 
 @ApiTags('Team Documents')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('teams/:teamId/documents')
 @UseGuards(JwtAuthGuard)
 export class TeamDocumentController {
-  private logger = new Logger('TeamDocumentController');
 
   constructor(
     private documentService: TeamDocumentService,
     private permissionService: PermissionService,
+    private userContext: UserContextService,
   ) { }
 
   /**
@@ -36,33 +41,19 @@ export class TeamDocumentController {
    * POST /teams/:teamId/documents
    */
   @Post()
+  @swaggerDecorators.ApiCreateTeamDocumentSwaggerDecorator()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(RoleGuard)
-  @ApiOperation({ summary: 'Create document in team (EDITOR or ADMIN)' })
-  @ApiResponse({
-    status: 201,
-    description: 'Document created successfully',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid request data',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Insufficient permissions',
-  })
   async createDocument(
     @Param('teamId') teamId: string,
-    @Body() dto: { title: string; content?: string; folderId?: string },
-    @Req() req: any,
+    @Body() dto: CreateTeamDocumentDto,
   ): Promise<any> {
+    winstonLogger.log(`Creating document in team ${teamId} with title "${dto.title}"`);
+    const userId = this.userContext.getCurrentUserId();
     try {
-      this.logger.log(`User ${req.user.id} creating document in team ${teamId}`);
-
-      const document = await this.documentService.createTeamDocument(teamId, req.user.id, dto);
+      const document = await this.documentService.createTeamDocument(teamId, userId, dto);
       return document;
     } catch (error: any) {
-      this.logger.error(`Failed to create document: ${error.message}`);
       throw error;
     }
   }
@@ -72,25 +63,15 @@ export class TeamDocumentController {
    * GET /teams/:teamId/documents
    */
   @Get()
+  @swaggerDecorators.ApiListTeamDocumentsSwaggerDecorator()
   @UseGuards(RoleGuard)
-  @ApiOperation({ summary: 'List documents in team' })
-  @ApiResponse({
-    status: 200,
-    description: 'Documents retrieved successfully',
-    isArray: true,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Not a member of this team',
-  })
   async listDocuments(
     @Param('teamId') teamId: string,
-    @Req() req: any,
     @Query('skip') skip: number = 0,
     @Query('take') take: number = 20,
   ): Promise<any> {
     try {
-      this.logger.log(`User ${req.user.id} listing documents in team ${teamId}`);
+      const userId = this.userContext.getCurrentUserId();
 
       // Validate pagination
       const safeSkip = Math.max(0, parseInt(String(skip)) || 0);
@@ -98,13 +79,12 @@ export class TeamDocumentController {
 
       const documents = await this.documentService.listTeamDocuments(
         teamId,
-        req.user.id,
+        userId,
         safeSkip,
         safeTake,
       );
       return documents;
     } catch (error: any) {
-      this.logger.error(`Failed to list documents: ${error.message}`);
       throw error;
     }
   }
@@ -114,32 +94,18 @@ export class TeamDocumentController {
    * GET /teams/:teamId/documents/:docId
    */
   @Get(':docId')
+  @swaggerDecorators.ApiGetTeamDocumentSwaggerDecorator()
   @UseGuards(RoleGuard)
-  @ApiOperation({ summary: 'Get document from team' })
-  @ApiResponse({
-    status: 200,
-    description: 'Document retrieved successfully',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Access denied',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Document not found',
-  })
   async getDocument(
     @Param('teamId') teamId: string,
     @Param('docId') docId: string,
-    @Req() req: any,
   ): Promise<any> {
     try {
-      this.logger.log(`User ${req.user.id} getting document ${docId} from team ${teamId}`);
 
-      const document = await this.documentService.getTeamDocument(teamId, docId, req.user.id);
+      const userId = this.userContext.getCurrentUserId();
+      const document = await this.documentService.getTeamDocument(teamId, docId, userId);
       return document;
     } catch (error: any) {
-      this.logger.error(`Failed to get document: ${error.message}`);
       throw error;
     }
   }
@@ -149,42 +115,24 @@ export class TeamDocumentController {
    * PUT /teams/:teamId/documents/:docId
    */
   @Put(':docId')
+  @swaggerDecorators.ApiUpdateTeamDocumentSwaggerDecorator()
   @UseGuards(RoleGuard)
-  @ApiOperation({ summary: 'Update document (EDITOR or ADMIN)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Document updated successfully',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid request data',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Insufficient permissions',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Document not found',
-  })
   async updateDocument(
     @Param('teamId') teamId: string,
     @Param('docId') docId: string,
     @Body() dto: { title?: string; content?: string; changelog?: string; folderId?: string },
-    @Req() req: any,
   ): Promise<any> {
     try {
-      this.logger.log(`User ${req.user.id} updating document ${docId} in team ${teamId}`);
+      const userId = this.userContext.getCurrentUserId();
 
       const document = await this.documentService.updateTeamDocument(
         teamId,
         docId,
-        req.user.id,
+        userId,
         dto,
       );
       return document;
     } catch (error: any) {
-      this.logger.error(`Failed to update document: ${error.message}`);
       throw error;
     }
   }
@@ -194,32 +142,18 @@ export class TeamDocumentController {
    * DELETE /teams/:teamId/documents/:docId
    */
   @Delete(':docId')
+  @swaggerDecorators.ApiDeleteTeamDocumentSwaggerDecorator()
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(RoleGuard)
-  @ApiOperation({ summary: 'Delete document (EDITOR or ADMIN)' })
-  @ApiResponse({
-    status: 204,
-    description: 'Document deleted successfully',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Insufficient permissions',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Document not found',
-  })
   async deleteDocument(
     @Param('teamId') teamId: string,
     @Param('docId') docId: string,
-    @Req() req: any,
   ): Promise<void> {
     try {
-      this.logger.log(`User ${req.user.id} deleting document ${docId} from team ${teamId}`);
+      const userId = this.userContext.getCurrentUserId();
 
-      await this.documentService.deleteTeamDocument(teamId, docId, req.user.id);
+      await this.documentService.deleteTeamDocument(teamId, docId, userId);
     } catch (error: any) {
-      this.logger.error(`Failed to delete document: ${error.message}`);
       throw error;
     }
   }
@@ -229,32 +163,16 @@ export class TeamDocumentController {
    * GET /teams/:teamId/documents/:docId/versions
    */
   @Get(':docId/versions')
+  @swaggerDecorators.ApiListTeamDocumentVersionsSwaggerDecorator()
   @UseGuards(RoleGuard)
-  @ApiOperation({ summary: 'Get document version history' })
-  @ApiResponse({
-    status: 200,
-    description: 'Version history retrieved successfully',
-    isArray: true,
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Access denied',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Document not found',
-  })
   async getVersions(
     @Param('teamId') teamId: string,
     @Param('docId') docId: string,
-    @Req() req: any,
     @Query('skip') skip: number = 0,
     @Query('take') take: number = 20,
   ): Promise<any> {
     try {
-      this.logger.log(
-        `User ${req.user.id} getting versions for document ${docId} in team ${teamId}`,
-      );
+      const userId = this.userContext.getCurrentUserId();
 
       // Validate pagination
       const safeSkip = Math.max(0, parseInt(String(skip)) || 0);
@@ -263,13 +181,12 @@ export class TeamDocumentController {
       const versions = await this.documentService.getDocumentVersions(
         teamId,
         docId,
-        req.user.id,
+        userId,
         safeSkip,
         safeTake,
       );
       return versions;
     } catch (error: any) {
-      this.logger.error(`Failed to get versions: ${error.message}`);
       throw error;
     }
   }

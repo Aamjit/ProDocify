@@ -94,8 +94,7 @@ export class TeamService {
           include: {
             owner: { select: { id: true, email: true, name: true } },
             members: {
-              where: { userId },
-              select: { role: true },
+              select: { role: true, joinedAt: true, user: { select: { email: true, name: true } } },
             },
             _count: {
               select: { documents: true, members: true },
@@ -108,7 +107,7 @@ export class TeamService {
         this.prisma.team.count({
           where: {
             members: {
-              some: { userId },
+              some: { userId, role: { in: ['ADMIN', 'VIEWER'] } },
             },
           },
         }),
@@ -198,7 +197,7 @@ export class TeamService {
     try {
       // Verify user is member
       const membership = await this.prisma.teamMember.findFirst({
-        where: { teamId, userId },
+        where: { teamId, userId, role: { in: ['ADMIN', 'EDITOR', 'VIEWER'] } },
       });
 
       if (!membership) {

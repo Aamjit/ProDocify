@@ -27,7 +27,7 @@ export class RoleGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.get<string[]>(ROLES_KEY, context.getHandler());
-
+    console.log('Required roles for this route:', requiredRoles);
     if (!requiredRoles) {
       return true; // No role requirement, allow access
     }

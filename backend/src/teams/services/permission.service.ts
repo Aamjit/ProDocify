@@ -89,7 +89,7 @@ export class PermissionService {
   }
 
   /**
-   * Check if user can edit team document (needs EDITOR or ADMIN role)
+   * Check if user can edit team document (needs EDITOR or OWNER role)
    */
   async canEditTeamDocument(userId: string, documentId: string): Promise<boolean> {
     try {
@@ -112,7 +112,7 @@ export class PermissionService {
   }
 
   /**
-   * Check if user can delete team document (needs ADMIN or is owner)
+   * Check if user can delete team document (needs OWNER or is owner)
    */
   async canDeleteTeamDocument(userId: string, documentId: string): Promise<boolean> {
     try {
@@ -184,11 +184,11 @@ export class PermissionService {
       if (!userRole) return false;
 
       // Admin has all permissions
-      if (userRole === 'ADMIN') return true;
+      if (userRole === 'OWNER' || userRole === 'ADMIN') return true;
 
       // Check specific role
-      if (role === 'ADMIN') return false;
-      if (role === 'EDITOR') return userRole === 'EDITOR' || userRole === 'ADMIN';
+      if (role === 'OWNER') return false;
+      if (role === 'EDITOR') return userRole === 'EDITOR';
       if (role === 'VIEWER') return true; // All members are viewers
 
       return false;

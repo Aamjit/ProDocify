@@ -26,6 +26,7 @@ import { CreateDocumentDto } from './dto/create-document.dto.js';
 import { CreateVersionDto } from './dto/create-version.dto.js';
 // import { RollbackDto } from './dto/rollback.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto.js';
+import { winstonLogger } from '../common/logger.js';
 
 @ApiTags('documents')
 @ApiBearerAuth('JWT-auth')
@@ -67,7 +68,7 @@ export class DocumentsController {
     @Body() createDocumentDto: CreateDocumentDto,
     @CurrentUser() currentUser: AuthenticatedUserDto,
   ): Promise<any> {
-    return this.documentsService.create({ ...createDocumentDto, ownerId: currentUser.id });
+    return this.documentsService.create({ ...createDocumentDto }, currentUser.id);
   }
 
   @Patch(':id')
@@ -122,6 +123,26 @@ export class DocumentsController {
     );
   }
 
+  @Get(':id/versions/compare')
+  @ApiOperation({ summary: 'Compare two versions of a document' })
+  @ApiQuery({ name: 'version1', required: true, type: Number, description: 'First version number' })
+  @ApiQuery({ name: 'version2', required: true, type: Number, description: 'Second version number' })
+  @ApiResponse({ status: 200, description: 'Version comparison' })
+  compareVersions(
+    @Param('id') id: string,
+    @Query('version1') version1: string,
+    @Query('version2') version2: string,
+    @CurrentUser() currentUser: AuthenticatedUserDto,
+  ): Promise<any> {
+    winstonLogger.log(`Comparing versions ${version1} and ${version2} for document ${id} by user ${currentUser.id}`);
+    return this.versionService.compareVersions(
+      id,
+      parseInt(version1, 10),
+      parseInt(version2, 10),
+      currentUser.id,
+    );
+  }
+
   @Get(':id/versions/:versionNumber')
   @ApiOperation({ summary: 'Get a specific version of a document' })
   @ApiResponse({ status: 200, description: 'Specific version found' })
@@ -130,7 +151,7 @@ export class DocumentsController {
     @Param('versionNumber') versionNumber: string,
     @CurrentUser() currentUser: AuthenticatedUserDto,
   ): Promise<any> {
-    return this.versionService.getVersion(id, parseInt(versionNumber), currentUser.id);
+    return this.versionService.getVersion(id, parseInt(versionNumber, 10), currentUser.id);
   }
 
   @Post(':id/versions')
@@ -153,30 +174,6 @@ export class DocumentsController {
     @Param('versionNumber') versionNumber: string,
     @CurrentUser() currentUser: AuthenticatedUserDto,
   ): Promise<any> {
-    return this.versionService.rollbackToVersion(id, parseInt(versionNumber), currentUser.id);
-  }
-
-  @Get(':id/versions/compare')
-  @ApiOperation({ summary: 'Compare two versions of a document' })
-  @ApiQuery({ name: 'version1', required: true, type: Number, description: 'First version number' })
-  @ApiQuery({
-    name: 'version2',
-    required: true,
-    type: Number,
-    description: 'Second version number',
-  })
-  @ApiResponse({ status: 200, description: 'Version comparison' })
-  compareVersions(
-    @Param('id') id: string,
-    @Query('version1') version1: string,
-    @Query('version2') version2: string,
-    @CurrentUser() currentUser: AuthenticatedUserDto,
-  ): Promise<any> {
-    return this.versionService.compareVersions(
-      id,
-      parseInt(version1),
-      parseInt(version2),
-      currentUser.id,
-    );
+    return this.versionService.rollbackToVersion(id, parseInt(versionNumber, 10), currentUser.id);
   }
 }

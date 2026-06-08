@@ -52,7 +52,7 @@ export class TeamMemberService {
         data: {
           teamId,
           userId: userToAdd.id,
-          role: data.role || 'VIEWER',
+          role: (data.role || 'VIEWER') as any,
         },
         include: {
           user: { select: { id: true, email: true, name: true } },
@@ -156,7 +156,7 @@ export class TeamMemberService {
 
       const updated = await this.prisma.teamMember.update({
         where: { id: memberId },
-        data: { role: data.role },
+        data: { role: data.role as any },
         include: {
           user: { select: { id: true, email: true, name: true } },
         },

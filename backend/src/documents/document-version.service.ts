@@ -321,6 +321,7 @@ export class DocumentVersionService {
     versionNumber2: number,
     userId: string,
   ) {
+    this.logger.log(`Comparing versions ${versionNumber1} and ${versionNumber2} for document ${documentId} by user ${userId}`);
     try {
       // Validate version numbers
       if (

@@ -8,6 +8,7 @@ import {
 import { DocumentVersionService } from '../../documents/document-version.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { PermissionService } from './permission.service.js';
+import { CreateTeamDocumentDto } from '../dto/team-document.dto.js';
 
 @Injectable()
 export class TeamDocumentService {
@@ -27,18 +28,13 @@ export class TeamDocumentService {
   async createTeamDocument(
     teamId: string,
     userId: string,
-    dto: {
-      title: string;
-      content?: string;
-      folderId?: string;
-      changelog?: string;
-    },
+    dto: CreateTeamDocumentDto,
   ) {
     try {
       this.logger.debug(`Creating team document for team ${teamId} by user ${userId}`);
 
       // Validate user can create documents in this team (EDITOR or ADMIN)
-      const hasEditRole = await this.permissionService.hasTeamRole(userId, teamId, 'EDITOR');
+      const hasEditRole = await this.permissionService.hasTeamRole(userId, teamId, 'ADMIN');
       if (!hasEditRole) {
         this.logger.warn(`User ${userId} denied edit access to team ${teamId}`);
         throw new ForbiddenException('You do not have permission to create documents in this team');

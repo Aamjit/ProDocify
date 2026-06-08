@@ -4,7 +4,9 @@
         "incremental": false,
         "sourceMap": false,
         "declaration": false,
-        "outDir": "dist"
+        "outDir": "dist",
+        "diagnostics": true,
+        "emitDecoratorMetadata": true,
     },
     "exclude": [
         "node_modules",

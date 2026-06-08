@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DocumentVersionService } from './document-version.service.js';
 import { CreateDocumentDto } from './dto/create-document.dto.js';
@@ -22,9 +22,11 @@ export class DocumentsService {
     );
   }
 
-  async create(data: CreateDocumentDto): Promise<any> {
+  async create(data: CreateDocumentDto, ownerId: string): Promise<any> {
+    await this.validateFolderOwnership(ownerId, data.folderId);
+
     const document = await this.prisma.runAsUser((prisma) =>
-      prisma.document.create({ data: { ...data, ownerId: data.ownerId } }),
+      prisma.document.create({ data: { ...data, ownerId } }),
     );
 
     if (document) {
@@ -36,7 +38,7 @@ export class DocumentsService {
             ? `Initial content for document "${document.title}"`
             : 'Initial content',
         },
-        data.ownerId,
+        ownerId,
       );
     }
 
@@ -44,6 +46,8 @@ export class DocumentsService {
   }
 
   async update(ownerId: string, id: string, data: UpdateDocumentDto): Promise<any> {
+    await this.validateFolderOwnership(ownerId, data.folderId);
+
     if (data.content) {
       await this.versionService.createVersion(
         id,
@@ -67,5 +71,19 @@ export class DocumentsService {
     return this.prisma.runAsUser((prisma) =>
       prisma.document.delete({ where: { id, ownerId } }),
     );
+  }
+
+  private async validateFolderOwnership(ownerId: string, folderId?: string): Promise<void> {
+    if (!folderId) {
+      return;
+    }
+
+    const folder = await this.prisma.folder.findFirst({
+      where: { id: folderId, ownerId },
+    });
+
+    if (!folder) {
+      throw new NotFoundException(`Folder ID: ${folderId} not found`);
+    }
   }
 }

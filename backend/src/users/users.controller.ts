@@ -14,7 +14,6 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   @Post('register')
-  @ApiOperation({ summary: 'Register a new user' })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({ status: 201, type: UserDto })
   async register(@Body() registerDto: RegisterDto): Promise<UserDto> {
@@ -23,6 +22,7 @@ export class UsersController {
     return {
       id: user.id,
       email: user.email,
+      name: user.name || undefined,
       password: '',
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -32,10 +32,8 @@ export class UsersController {
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get profile of currently logged-in user' })
   @ApiResponse({ status: 200, type: UserDto })
   async getProfile(@CurrentUser() user: AuthenticatedUserDto): Promise<UserDto> {
-    winstonLogger.log('info', `Fetching profile for user with ID: ${user.id}`);
     const userData = await this.usersService.findById(user.id);
     if (!userData) {
       throw new NotFoundException('User not found');
@@ -43,6 +41,7 @@ export class UsersController {
     return {
       id: userData.id,
       email: userData.email,
+      name: userData.name || undefined,
       password: '',
       createdAt: userData.createdAt,
       updatedAt: userData.updatedAt,

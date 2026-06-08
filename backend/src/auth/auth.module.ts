@@ -6,10 +6,12 @@ import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
+import { GoogleOAuthStrategy } from './strategies/google-oauth.strategy.js';
 
 @Module({
   imports: [
-    PassportModule,
+    ConfigModule,
+    PassportModule.register({ session: false }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -21,7 +23,7 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
     UsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, GoogleOAuthStrategy],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule { }

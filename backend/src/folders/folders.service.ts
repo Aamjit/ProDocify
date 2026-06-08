@@ -14,8 +14,7 @@ export class FoldersService {
   findAll(): Promise<any> {
     return this.prisma.runAsUser((prisma) =>
       (prisma as any).folder.findMany({
-        where: { ownerId: this.userContext.getCurrentUserId() },
-        include: { documents: true },
+        where: { ownerId: this.userContext.getCurrentUserId() }
       }),
     );
   }
